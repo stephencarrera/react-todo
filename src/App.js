@@ -19,7 +19,7 @@ const App = () => (
         <Link to="todos/new">Add</Link>
       </LinkStyle>
       <LinkStyle>
-        <Link to="todos">Show</Link>
+        <Link to="/todos">Show</Link>
       </LinkStyle>
     </div>
     <TodoList />
