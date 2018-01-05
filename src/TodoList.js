@@ -18,17 +18,20 @@ class TodoList extends Component {
     super(props);
     this.state = {
       todos: [],
-      latestId: 0
+      next: 0
     };
+    this.handleAdd = this.handleAdd.bind(this);
+    this.handleEdit = this.handleEdit.bind(this);
+    this.handleDelete = this.handleDelete.bind(this);
   }
   componentDidMount() {
     let todos = JSON.parse(localStorage.getItem("todos")) || [];
-    let latestId = +JSON.parse(localStorage.getItem("latestId")) || 0;
-    this.setState({ todos, latestId });
+    let nextId = +JSON.parse(localStorage.getItem("next")) || 0;
+    this.setState({ todos, nextId });
   }
 
   handleAdd(newTodo) {
-    let newId = this.state.latestId + 1;
+    let newId = this.state.nextId + 1;
     this.setState(
       {
         todos: [
@@ -38,15 +41,25 @@ class TodoList extends Component {
           },
           ...this.state.todos
         ],
-        latestId: newId
+        nextId: newId
       },
       () => {
         localStorage.setItem("todos", JSON.stringify(this.state.todos));
-        localStorage.setItem("latestId", JSON.stringify(this.state.latestId));
+        localStorage.setItem("nextId", JSON.stringify(this.state.nextId));
       }
     );
   }
 
+  handleEdit(id, editedTodo) {
+    let newTodos = this.state.todos.map(todo => {
+      if (id === todo.id) {
+        todo = Object.assign({}, todo, editedTodo, {
+          isShowingEditForm: false
+        });
+      }
+      return todo;
+    });
+  }
   handleDelete(id) {
     let newTodos = this.state.todos.filter(todo => {
       return todo.id !== id;
@@ -57,16 +70,56 @@ class TodoList extends Component {
       };
   }
 
-  render() {
-    return (
-      <ListStyle>
-        <p>hello from the list</p>
+  toggle(id, key) {
+    let newTodos = this.state.todos.map(todo => {
+      if (id === todo.id) {
+        todo = Object.assign({}, todo, { [key]: !todo[key] });
+      }
+      return todo;
+    });
+    this.setState({ todos: newTodos }, () => {
+      localStorage.setItem("todos", JSON.stringify(this.state.todos));
+    });
+  }
 
-        <Todo />
-        <Todo />
-        <Todo />
-        <Todo />
-      </ListStyle>
+  render() {
+    const todos = this.state.todos.map(todo => (
+      <Todo
+        key={todo.id}
+        id={todo.id}
+        title={todo.title}
+        description={todo.description}
+        handleDelete={() => this.handleDelete(todo.id)}
+        handleEdit={newProp => this.handleEdit(todo.id, newProp)}
+        toggleComplete={this.toggle.bind(this, todo.id, "isComplete")}
+        isComplete={todo.isComplete}
+        toggleEditForm={this.toggle.bind(this, todo.id, "isShowingEditForm")}
+        isShowingEditForm={this.isShowingEditForm}
+      />
+    ));
+
+    const getSingleComponent = routeProps => {
+      const id = +routeProps.match.params.id;
+      const todo = todos.find(todo => {
+        return id === todo.props.id;
+      });
+      return <ListStyle>{todo}</ListStyle>;
+    };
+
+    return (
+      <div>
+        <Switch>
+          <Route path="/todos" render={() => <ListStyle>{todos}</ListStyle>} />
+          <Route
+            path="/todos/new"
+            render={props => (
+              <TodoForm handleSubmit={this.handleAdd} {...props} />
+            )}
+          />
+          <Route path="/todos/:id" render={getSingleComponent} />
+          <Redirect to="/todos" />
+        </Switch>
+      </div>
     );
   }
 }
